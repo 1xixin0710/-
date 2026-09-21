@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大数据分析原理与实践 · 课程助教</title>
+<meta name="description" content="面向商学院同学的大数据分析课程助教：思维导图、章节精讲、题库练习、模拟考试、错题本、算法实验室与商业案例库。">
+<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar" class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">BD</div>
+      <div class="brand-text">
+        <strong>大数据分析助教</strong>
+        <span>原理与实践 · 商学院版</span>
+      </div>
+    </div>
+    <nav id="nav" class="nav"></nav>
+    <div class="side-foot">
+      <div id="sideStreak" class="streak"></div>
+      <button id="resetBtn" class="ghost-btn">清空学习数据</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button id="menuBtn" class="icon-btn only-mobile" aria-label="菜单">☰</button>
+      <div class="search-wrap">
+        <span class="search-ico">&#9906;</span>
+        <input id="globalSearch" type="search" placeholder="搜索章节 / 题目 / 术语 / 案例（Ctrl+K）" autocomplete="off">
+        <div id="searchPanel" class="search-panel" hidden></div>
+      </div>
+      <div class="topbar-right">
+        <div class="pill" id="progressPill">学习进度 0%</div>
+      </div>
+    </header>
+    <main id="view" class="view"></main>
+  </div>
+</div>
+
+<div id="scrim" class="scrim"></div>
+<div id="modal" class="modal" hidden><div class="modal-box" id="modalBox"></div></div>
+<div id="toast" class="toast"></div>
+
+<script src="assets/data/chapters.js"></script>
+<script src="assets/data/chapters-b.js"></script>
+<script src="assets/data/chapters-c.js"></script>
+<script src="assets/data/chapters-d.js"></script>
+<script src="assets/data/questions-core.js"></script>
+<script src="assets/data/questions-adv.js"></script>
+<script src="assets/data/questions-adv2.js"></script>
+<script src="assets/data/glossary.js"></script>
+<script src="assets/data/cases.js"></script>
+<script src="assets/data/formulas.js"></script>
+<script src="assets/data/mindmap.js"></script>
+<script src="assets/js/core.js"></script>
+<script src="assets/js/demos.js"></script>
+<script src="assets/js/demos2.js"></script>
+<script src="assets/js/demos3.js"></script>
+<script src="assets/js/views-learn.js"></script>
+<script src="assets/js/views-learn2.js"></script>
+<script src="assets/js/views-drill.js"></script>
+<script src="assets/js/views-drill2.js"></script>
+<script src="assets/js/views-apply.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
