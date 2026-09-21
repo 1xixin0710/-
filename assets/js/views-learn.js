@@ -110,8 +110,13 @@ BD.route('/chapter/:id', function(el, p){
   var st = BD.store.get(), c = BD.stats.chapter(ch.id);
   var idx = BD.chapters.indexOf(ch);
   var prev = BD.chapters[idx-1], next = BD.chapters[idx+1];
+  var q = new URLSearchParams((location.hash.split('?')[1]||''));
+  var wantSec = q.get('sec');
+  var fromMap = q.get('from') === 'mm';
 
-  var html = '<div class="crumb"><a href="#/chapters">章节精讲</a> / 第'+ch.no+'章</div>'
+  var html = '<div class="crumb"><a href="#/chapters">章节精讲</a> / 第'+ch.no+'章'
+    + (fromMap ? ' <a class="small" href="#/mindmap" style="margin-left:8px">← 返回思维导图</a>' : '')
+    + '</div>'
     + '<div class="page-head"><h1>第'+ch.no+'章　'+BD.esc(ch.title)+'</h1>'
     + '<div class="sub">'+BD.esc(ch.intro)+'</div></div>';
 
@@ -132,10 +137,11 @@ BD.route('/chapter/:id', function(el, p){
   html += '<div class="card"><div class="sect-title">核心内容</div>';
   ch.sections.forEach(function(s, i){
     var done = !!st.readSections[ch.id+':'+i];
-    html += '<div class="sec" data-sec="'+i+'">'
+    var hit = wantSec !== null && String(i) === String(wantSec);
+    html += '<div class="sec'+(hit?' hl':'')+'" data-sec="'+i+'">'
       + '<h4 style="display:flex;align-items:center;gap:9px">'
       + '<input type="checkbox" class="secread" data-i="'+i+'" '+(done?'checked':'')+' style="accent-color:var(--accent);cursor:pointer;width:15px;height:15px">'
-      + '<span>'+BD.esc(s.h)+'</span></h4>';
+      + '<span>'+BD.esc(s.h)+'</span>'+(hit?'<span class="chip tone-a" style="font-size:11px">导图定位</span>':'')+'</h4>';
     (s.ps||[]).forEach(function(t){ html += '<p style="font-size:13.5px;color:var(--ink2);margin-bottom:9px">'+BD.esc(t)+'</p>'; });
     if(s.list && s.list.length){
       html += '<ul>';
@@ -173,6 +179,15 @@ BD.route('/chapter/:id', function(el, p){
 
   el.innerHTML = html;
 
+  if(wantSec !== null){
+    var hitEl = el.querySelector('.sec[data-sec="'+wantSec+'"]');
+    if(hitEl){
+      requestAnimationFrame(function(){
+        try{ hitEl.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){ hitEl.scrollIntoView(); }
+      });
+    }
+  }
+
   el.querySelectorAll('.secread').forEach(function(cb){
     cb.onchange = function(){
       var i = this.getAttribute('data-i');
@@ -188,7 +203,7 @@ BD.route('/chapter/:id', function(el, p){
     BD.go('/chapter/'+ch.id); BD.toast('已标记本章全部内容为已读','ok');
   };
 
-  var tree = { t: '第'+ch.no+'章 '+ch.title, c: ch.sections.map(function(s){
+  var tree = { t: '第'+ch.no+'章 '+ch.title, c: ch.sections.map(function(s, si){
     var children = (s.list || []).map(function(item){
       var text = item.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
       return { t: text.length > 26 ? text.slice(0, 26) + '…' : text };
@@ -199,8 +214,17 @@ BD.route('/chapter/:id', function(el, p){
         return { t: text.length > 26 ? text.slice(0, 26) + '…' : text };
       }).filter(function(item){ return item.t; });
     }
-    return { t: s.h.replace(/^[一二三四五六七八九十]+、/,''), c: children };
+    return { t: s.h.replace(/^[一二三四五六七八九十]+、/,''), c: children, ch: ch.id, sec: si };
   })};
-  if(BD.renderMindmap) BD.renderMindmap(el.querySelector('#chMini .mm-canvas'), tree, {height:380, collapsedDepth:1, maxScale:1.2});
+  if(BD.renderMindmap) BD.renderMindmap(el.querySelector('#chMini .mm-canvas'), tree, {
+    height:380, collapsedDepth:1, maxScale:1.2,
+    activate:function(n){
+      var secEl = el.querySelector('.sec[data-sec="'+n.sec+'"]');
+      if(!secEl) return;
+      el.querySelectorAll('.sec.hl').forEach(function(x){ x.classList.remove('hl'); });
+      secEl.classList.add('hl');
+      try{ secEl.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){ secEl.scrollIntoView(); }
+    }
+  });
 });
 })();
