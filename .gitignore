@@ -2,3 +2,5 @@ Thumbs.db
 Desktop.ini
 *.tmp
 .DS_Store
+.playwright-cli/
+output/

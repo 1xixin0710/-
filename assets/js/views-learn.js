@@ -189,11 +189,18 @@ BD.route('/chapter/:id', function(el, p){
   };
 
   var tree = { t: '第'+ch.no+'章 '+ch.title, c: ch.sections.map(function(s){
-    return { t: s.h.replace(/^[一二三四五六七八九十]+、/,''), c: [] };
+    var children = (s.list || []).map(function(item){
+      var text = item.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      return { t: text.length > 26 ? text.slice(0, 26) + '…' : text };
+    }).filter(function(item){ return item.t; });
+    if(!children.length){
+      children = (s.ps || []).map(function(item){
+        var text = item.replace(/\s+/g, ' ').trim();
+        return { t: text.length > 26 ? text.slice(0, 26) + '…' : text };
+      }).filter(function(item){ return item.t; });
+    }
+    return { t: s.h.replace(/^[一二三四五六七八九十]+、/,''), c: children };
   })};
-  (ch.key||[]).slice(0,5).forEach(function(k){
-    if(tree.c.length) tree.c[0].c.push({t:k.t});
-  });
-  if(BD.renderMindmap) BD.renderMindmap(el.querySelector('#chMini .mm-canvas'), tree, {height:380});
+  if(BD.renderMindmap) BD.renderMindmap(el.querySelector('#chMini .mm-canvas'), tree, {height:380, collapsedDepth:1, maxScale:1.2});
 });
 })();

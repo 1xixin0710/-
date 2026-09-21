@@ -8,7 +8,7 @@ var NS = 'http://www.w3.org/2000/svg';
 function layoutTree(root){
   var H = 32, VGAP = 11, HGAP = 54, PAD = 26;
   var cursor = 0, maxW = {}, depthNodes = {};
-  function w(t){ return Math.max(74, Math.min(240, t.length * 13.5 + 26)); }
+  function w(t){ return Math.max(74, Math.min(290, t.length * 13.5 + 26)); }
   function walk(node, depth){
     node.depth = depth;
     node.w = w(node.t);
@@ -42,13 +42,21 @@ BD.renderMindmap = function(container, tree, opts){
   opts = opts || {};
   if(!container || !tree) return;
   var state = { collapsed: {}, vb:null, layout:null };
+  if(opts.collapsedDepth != null) state.collapsedDepth = opts.collapsedDepth;
 
   function rebuild(){
     var root = JSON.parse(JSON.stringify(tree));
-    (function apply(node){
-      if(state.collapsed[node.t]) node.collapsed = true;
-      if(node.c) node.c.forEach(apply);
-    })(root);
+    var depthInit = state.collapsedDepth;
+    (function mark(node, id, depth){
+      node.id = id;
+      var hasKids = node.c && node.c.length;
+      if(hasKids && (state.collapsed[id] || (depthInit != null && depth === depthInit))){
+        node.collapsed = true;
+        state.collapsed[id] = true;
+      }
+      if(node.c) node.c.forEach(function(k, i){ mark(k, id + '/' + i, depth + 1); });
+    })(root, '0', 0);
+    state.collapsedDepth = null;
     state.layout = layoutTree(root);
     state.root = root;
   }
@@ -57,6 +65,10 @@ BD.renderMindmap = function(container, tree, opts){
   var svg = document.createElementNS(NS,'svg');
   container.innerHTML = '';
   container.appendChild(svg);
+
+  function apply(){
+    svg.setAttribute('viewBox', state.vb.x+' '+state.vb.y+' '+state.vb.w+' '+state.vb.h);
+  }
 
   function draw(){
     var L = state.layout, H = L.H;
@@ -86,9 +98,12 @@ BD.renderMindmap = function(container, tree, opts){
       var t = document.createElementNS(NS,'text');
       t.setAttribute('x', n.x + 13);
       t.setAttribute('y', n.y + H/2 + 1);
-      var label = n.t.length > 17 ? n.t.slice(0,16) + '…' : n.t;
+      var label = n.t.length > 22 ? n.t.slice(0,21) + '…' : n.t;
       t.textContent = label;
       grp.appendChild(t);
+      var tip = document.createElementNS(NS,'title');
+      tip.textContent = n.t;
+      grp.appendChild(tip);
       if(n.c && n.c.length){
         var b = document.createElementNS(NS,'text');
         b.setAttribute('class','mm-badge');
@@ -102,22 +117,33 @@ BD.renderMindmap = function(container, tree, opts){
       grp.addEventListener('click', function(ev){
         ev.stopPropagation();
         if(!n.c || !n.c.length) return;
-        if(state.collapsed[n.t]) delete state.collapsed[n.t];
-        else state.collapsed[n.t] = true;
-        rebuild(); draw(); fit(false);
+        if(state.collapsed[n.id]) delete state.collapsed[n.id];
+        else state.collapsed[n.id] = true;
+        rebuild(); draw(); fit(); centerOn(n.id);
       });
       g.appendChild(grp);
     });
   }
 
-  function fit(force){
+  function centerOn(id){
+    var target = null;
+    state.layout.nodes.forEach(function(n){ if(n.id === id) target = n; });
+    if(!target) return;
+    state.vb.x = target.x - state.vb.w * 0.2;
+    state.vb.y = target.y + state.layout.H / 2 - state.vb.h / 2;
+    apply();
+  }
+
+  function fit(){
     var L = state.layout;
     var box = container.getBoundingClientRect();
     var w = Math.max(box.width, 300), h = opts.height || box.height || 620;
-    var sx = L.width / w, sy = L.height / h;
-    var s = Math.max(sx, sy) * 1.06;
-    state.vb = { x: -12, y: -12, w: w * s, h: h * s };
-    svg.setAttribute('viewBox', state.vb.x+' '+state.vb.y+' '+state.vb.w+' '+state.vb.h);
+    var s = Math.max(L.width / w, L.height / h) * 1.06;
+    if(opts.maxScale) s = Math.min(s, opts.maxScale);
+    state.vb = { x: 0, y: 0, w: w * s, h: h * s };
+    state.vb.x = state.vb.w > L.width ? -(state.vb.w - L.width) / 2 : -12;
+    state.vb.y = state.vb.h > L.height ? -(state.vb.h - L.height) / 2 : -12;
+    apply();
   }
 
   container.addEventListener('wheel', function(e){
@@ -125,7 +151,7 @@ BD.renderMindmap = function(container, tree, opts){
     var f = e.deltaY > 0 ? 1.12 : 0.89;
     var vb = state.vb;
     vb.w *= f; vb.h *= f;
-    svg.setAttribute('viewBox', vb.x+' '+vb.y+' '+vb.w+' '+vb.h);
+    apply();
   }, {passive:false});
 
   var drag = null;
@@ -139,18 +165,29 @@ BD.renderMindmap = function(container, tree, opts){
     var kx = state.vb.w / box.width, ky = state.vb.h / box.height;
     state.vb.x = drag.vb.x - (e.clientX - drag.x) * kx;
     state.vb.y = drag.vb.y - (e.clientY - drag.y) * ky;
-    svg.setAttribute('viewBox', state.vb.x+' '+state.vb.y+' '+state.vb.w+' '+state.vb.h);
+    apply();
   });
   window.addEventListener('mouseup', function(){ drag = null; container.classList.remove('grabbing'); });
 
-  draw(); fit(true);
-  container._mm = {fit:fit, state:state, svg:svg, relayout:function(){ rebuild(); draw(); fit(true); }};
+  draw(); fit();
+  container._mm = {
+    fit:fit, state:state, svg:svg, centerOn:centerOn,
+    idsAtDepth:function(depth){
+      var out = [];
+      (function walk(n, d){
+        if(d === depth) out.push(n.id);
+        if(n.c && d < depth) n.c.forEach(function(k){ walk(k, d + 1); });
+      })(state.root, 0);
+      return out;
+    },
+    relayout:function(){ rebuild(); draw(); fit(); }
+  };
 };
 
 /* ================= 思维导图页 ================= */
 BD.route('/mindmap', function(el){
   var html = '<div class="page-head"><h1>知识思维导图</h1>'
-    + '<div class="sub">点击节点可折叠展开，滚轮缩放，按住拖动平移。可作为考前复习提纲使用。</div></div>'
+    + '<div class="sub">点击带 ＋ 的章节节点查看内容；滚轮缩放，按住拖动平移。可作为考前复习提纲使用。</div></div>'
     + '<div class="mm-wrap"><div class="mm-toolbar">'
     + '<button class="btn sm primary" id="mmFit">适应窗口</button>'
     + '<button class="btn sm" id="mmExpand">全部展开</button>'
@@ -171,21 +208,21 @@ BD.route('/mindmap', function(el){
   el.innerHTML = html;
 
   var canvas = document.getElementById('mmCanvas');
-  BD.renderMindmap(canvas, BD.mindmap, {height:660});
+  BD.renderMindmap(canvas, BD.mindmap, {height:660, collapsedDepth:1, maxScale:1.2});
 
-  document.getElementById('mmFit').onclick = function(){ canvas._mm.fit(true); };
+  document.getElementById('mmFit').onclick = function(){ canvas._mm.fit(); };
   document.getElementById('mmExpand').onclick = function(){ canvas._mm.state.collapsed = {}; canvas._mm.relayout(); };
   document.getElementById('mmCollapse').onclick = function(){
-    var c = {};
-    (BD.mindmap.c||[]).forEach(function(n){ c[n.t] = true; });
-    canvas._mm.state.collapsed = c; canvas._mm.relayout();
+    canvas._mm.state.collapsed = {};
+    canvas._mm.idsAtDepth(1).forEach(function(id){ canvas._mm.state.collapsed[id] = true; });
+    canvas._mm.relayout();
   };
   document.getElementById('mmTxt').onclick = function(){
     var out = '';
     (function walk(n, d){
       out += new Array(d+1).join('  ') + '- ' + n.t + '\n';
-      if(n.c && !canvas._mm.state.collapsed[n.t]) n.c.forEach(function(k){ walk(k, d+1); });
-    })(BD.mindmap, 0);
+      if(n.c && !canvas._mm.state.collapsed[n.id]) n.c.forEach(function(k){ walk(k, d+1); });
+    })(canvas._mm.state.root, 0);
     download('大数据分析原理与实践-知识大纲.md', out);
   };
   document.getElementById('mmPng').onclick = function(){ exportSvgPng(canvas, '大数据分析知识导图.png'); };

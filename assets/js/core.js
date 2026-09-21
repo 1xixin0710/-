@@ -170,7 +170,8 @@ BD.routes = [];
 BD.route = function(pattern, handler){ BD.routes.push({p:pattern.split('/').filter(Boolean), h:handler}); };
 BD.go = function(path){ if(location.hash.slice(1) === path) BD.resolve(); else location.hash = path; };
 BD.resolve = function(){
-  var path = location.hash.replace(/^#/,'') || '/';
+  var rawPath = location.hash.replace(/^#/,'') || '/';
+  var path = rawPath.split('?')[0] || '/';
   var parts = path.split('/').filter(Boolean);
   for(var i=0;i<BD.routes.length;i++){
     var r = BD.routes[i];
@@ -180,7 +181,7 @@ BD.resolve = function(){
       if(r.p[j].charAt(0) === ':') params[r.p[j].slice(1)] = decodeURIComponent(parts[j]);
       else if(r.p[j] !== parts[j]){ ok = false; break; }
     }
-    if(ok){ BD.currentRoute = path; BD.render(r.h, params); return; }
+    if(ok){ BD.currentRoute = rawPath; BD.render(r.h, params); return; }
   }
   BD.go('/');
 };

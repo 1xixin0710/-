@@ -333,6 +333,7 @@ table.tbl tr.hl td{background:var(--accent-soft)}
 .scrim{position:fixed;inset:0;background:rgba(16,24,40,.45);backdrop-filter:blur(2px);z-index:60;opacity:0;pointer-events:none;transition:opacity .2s}
 .scrim.on{opacity:1;pointer-events:auto}
 .modal{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:22px}
+.modal[hidden]{display:none}
 .modal-box{background:#fff;border-radius:var(--r);box-shadow:var(--sh-lg);max-width:780px;width:100%;max-height:86vh;overflow:auto;padding:24px}
 .modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:15px}
 .modal-head h3{font-size:18px}
